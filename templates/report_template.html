@@ -4,95 +4,85 @@
     <meta charset="utf-8">
     <title>测试报告</title>
     <style>
-        table {
-            border-collapse: collapse;
-            width: 100%;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
+        .mismatch {
+            background-color: #FFCCCC;
+            color: black;
         }
     </style>
     <!-- 引入Bootstrap和jQuery -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
-<h1>测试报告</h1>
-<p>df_result总行数：{{ total_rows_result }}</p>
-<p>df_expected总行数：{{ total_rows_expected }}</p>
-<p>匹配上的行数：{{ matched_rows }}</p>
-<p>匹配上的数据中其余列也相同的行数：{{ matched_rows_same }}</p>
-<p>匹配上的数据中其余列不相同的行数：{{ matched_rows_diff }}</p>
+<div class="container py-3">
+    <div class="card">
+        <div class="card-body">
+            <h1 class="card-title">测试报告</h1>
+            <p class="card-text">df_result总行数：{{ total_rows_result }}</p>
+            <p class="card-text">df_expected总行数：{{ total_rows_expected }}</p>
+            <p class="card-text">匹配上的行数：{{ matched_rows }}</p>
+            <p class="card-text">匹配上的数据中其余列也相同的行数：{{ matched_rows_same }}</p>
+            <p class="card-text">匹配上的数据中其余列不相同的行数：{{ matched_rows_diff }}</p>
 
-{% if matched_rows_diff > 0 %}
-<h2>匹配上的数据中其余列不相同的行</h2>
-<table>
-    <thead>
-    </thead>
-    <tbody>
-    {% for index, row in mismatched_df.iterrows() %}
-    <tr>
-        <th>id</th>
-        <td>{{ row['id'] }}</td>
-        {% for column, values in row['mismatched_columns'].items() %}
-        <th>{{ column }}</th>
-        <td>
-            {% set expected_data = values[1]|string %}
-            {% set actual_data = values[0]|string %}
-            {% if expected_data|length > 20 %}
-            <div class="tooltip" data-toggle="modal" data-target="#myModal{{index}}{{loop.index}}Expected">
-                预期数据：{{ expected_data[:20] }}...
-            </div>
-            <div class="modal fade" id="myModal{{index}}{{loop.index}}Expected">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h4 class="modal-title">预期数据</h4>
-                            <button type="button" class="close" data-dismiss="modal">&times;</button>
-                        </div>
-                        <div class="modal-body">
-                            {{ expected_data }}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <br>
-            {% else %}
-            预期数据：{{ expected_data }}
-            <br>
-            {% endif %}
-            {% if actual_data|length > 20 %}
-            <div class="tooltip" data-toggle="modal" data-target="#myModal{{index}}{{loop.index}}Actual">
-                实际数据：{{ actual_data[:20] }}...
-            </div>
-            <div class="modal fade" id="myModal{{index}}{{loop.index}}Actual">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h4 class="modal-title">实际数据</h4>
-                            <button type="button" class="close" data-dismiss="modal">&times;</button>
-                        </div>
-                        <div class="modal-body">
+            {% if matched_rows_diff > 0 %}
+            <h2 class="card-title">匹配上的数据中其余列不相同的行</h2>
+            <div class="table-responsive">
+                <table class="table table-vcenter table-nowrap">
+                    <thead>
+                    <tr>
+                        <th>id</th>
+                        {% for column in all_columns %}
+                        <th>{{ column }}</th>
+                        {% endfor %}
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for index, row in all_df.iterrows() %}
+                    <tr>
+                        <td>{{ row['id'] }}</td>
+                        {% for column, values in row['columns'].items() %}
+                        <td class="{{ 'mismatch' if values[0] != values[1] else '' }}">
+                            {% set expected_data = values[1]|string %}
+                            {% set actual_data = values[0]|string %}
+                            {% if expected_data != actual_data %}
+                            {% if expected_data|length > 15 %}
+                            <span data-toggle="popover" data-content="{{ expected_data }}">
+        预期数据：{{ expected_data[:15] }}...
+    </span>
+                            {% else %}
+                            预期数据：{{ expected_data }}
+                            {% endif %}
+                            <br>
+                            {% if actual_data|length > 15 %}
+                            <span data-toggle="popover" data-content="{{ actual_data }}">
+        实际数据：{{ actual_data[:15] }}...
+    </span>
+                            {% else %}
+                            实际数据：{{ actual_data }}
+                            {% endif %}
+                            {% else %}
                             {{ actual_data }}
-                        </div>
-                    </div>
-                </div>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
             </div>
-            {% else %}
-            实际数据：{{ actual_data }}
             {% endif %}
-        </td>
-        {% endfor %}
-    </tr>
-    {% endfor %}
-    </tbody>
-</table>
-{% endif %}
+        </div>
+    </div>
+</div>
+<script>
+    $(document).ready(function () {
+    var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'))
+    var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+      return new bootstrap.Popover(popoverTriggerEl)
+    })
+});
+</script>
 </body>
 </html>
